@@ -14,51 +14,42 @@ const crypto = require("crypto");
  * @method  POST
  * @access  public
  ------------------------------------------------*/
-module.exports.registerUserCtrl = asyncHandler(async (req, res) => {
-  const { error } = validateRegisterUser(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
+  module.exports.registerUserCtrl=asyncHandler(async(req,res)=>{
 
-  let user = await User.findOne({ email: req.body.email });
-  if (user) {
-    return res.status(400).json({ message: "user already exist" });
-  }
+    // validation
+    const {error}=validateRegisterUser(req.body)
+    if (error){
+        return res.status(400).json({mesaage:error.details[0].message})
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    }
 
-  user = new User({
-    username: req.body.username,
-    email: req.body.email,
-    password: hashedPassword,
-  });
-  await user.save();
+   
 
-  // Creating new VerificationToken & save it toDB
-  const verifictionToken = new VerificationToken({
-    userId: user._id,
-    token: crypto.randomBytes(32).toString("hex"),
-  });
-  await verifictionToken.save();
+    //is user already exist
+    let user=await User.findOne({email:req.body.email})
+    if (user){
+        return res.status(400).json({message:"user already exist"})
+    }
+    // hash the passowrd
+    const salt=await bcrypt.genSalt(10);
+    const hashedPassword=await bcrypt.hash(req.body.password,salt)
 
-  // Making the link
-  const link = `${process.env.CLIENT_DOMAIN}/users/${user._id}/verify/${verifictionToken.token}`;
+    
+    // new user and save it to Db
+    user=new User({
+        cardNumber:req.body.cardNumber,
+        userName:req.body.userName,
+        email:req.body.email,
+        password:hashedPassword,
 
-  // Putting the link into an html template
-  const htmlTemplate = `
-    <div>
-      <p>Click on the link below to verify your email</p>
-      <a href="${link}">Verify</a>
-    </div>`;
+    })
 
-  // Sending email to the user
+    await user.save();
 
-  // Response to the client
-  res.status(201).json({
-    message: "We sent to you an email, please verify your email address",
-  });
-});
+    //send a respose to client 
+    res.status(200).json({message:"you registered successfully, please log in "})
+    
+ });
 
 /**-----------------------------------------------
  * @desc    Login User
